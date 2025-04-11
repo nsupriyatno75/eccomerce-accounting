@@ -1,24 +1,29 @@
-# Gunakan image resmi PHP
+# Gunakan image PHP dengan ekstensi yang dibutuhkan
 FROM php:8.2-cli
 
-# Install ekstensi PHP yang dibutuhkan Laravel
+# Install dependency sistem & ekstensi PHP
 RUN apt-get update && apt-get install -y \
-    unzip curl git zip libzip-dev \
-    libpng-dev libonig-dev libxml2-dev \
-    && docker-php-ext-install \
-    pdo pdo_mysql mbstring zip exif pcntl bcmath
+    unzip git curl libzip-dev \
+    && docker-php-ext-install pdo pdo_mysql zip
+
+# Install Node.js & NPM (kalau kamu mau build Vite di container)
+RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+    && apt-get install -y nodejs
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Set working directory
+# Set direktori kerja
 WORKDIR /app
 
-# Salin semua file ke dalam container
+# Copy semua file ke dalam container (kecuali yang di .dockerignore)
 COPY . .
 
-# Install dependencies Laravel
+# Install PHP dependency
 RUN composer install --no-interaction --prefer-dist --optimize-autoloader
 
-# Jalankan Laravel saat container start
-CMD php artisan serve --host=0.0.0.0 --port=${PORT}
+# Build asset Vite (jika kamu ingin build di container)
+RUN npm install && npm run build
+
+# Jalankan Laravel
+CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
